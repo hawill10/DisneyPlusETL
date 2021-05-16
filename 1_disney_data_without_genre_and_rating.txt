@@ -1,0 +1,18 @@
+// load disney movies data
+val disneyDF = spark.read.format("csv").option("header", "true").load("final_new/disney_cleaned/disney_plus_movies_filtered")
+disneyDF.count() //Long = 664
+
+// load disney originals data
+val disneyOriginal = spark.read.format("csv").option("header", "true").load("final_new/disney_cleaned/disney_original_film")
+val originals = disneyOriginal.withColumnRenamed("Title", "original_title")
+
+// join all records with original titles
+val disneyJoined = disneyDF.join(originals, disneyDF("title") === originals("original_title"), "left")
+
+val disneyMid = (disneyJoined.withColumn("is_original", when($"original_title".isNull, 0).otherwise(1))
+									.drop("original_title")
+									.withColumn("platform", lit("Disney+"))
+									)
+
+// save disneyMid to csv
+disneyMid.write.option("header", "true").format("csv").save("final_new/mid/disney_mid")

@@ -1,0 +1,29 @@
+val disneyMid = (spark.read.format("csv")
+      .option("inferSchema", "true")
+      .option("sep",",")
+      .option("header", "true")
+      .load("final_new/mid_renamed/disney_mid")) // file path in hdfs
+
+val rating = (spark.read.format("csv")
+      .option("inferSchema", "true")
+      .option("sep","\t")
+      .option("header", "true")
+      .load("final_new/imdb/title.ratings.tsv")) // file path in hdfs
+
+val basic = (spark.read.format("csv")
+      .option("inferSchema", "true")
+      .option("sep","\t")
+      .option("header", "true")
+      .load("final_new/imdb/title.basics.tsv")) // file path in hdfs
+
+disneyMid.createOrReplaceTempView("DISNEY")
+rating.createOrReplaceTempView("RATING")
+basic.createOrReplaceTempView("BASIC")
+
+val disneyGenre = spark.sql("select d.*, b.genres from DISNEY d INNER JOIN BASIC b ON d.imdb_id = b.tconst")
+disneyGenre.createOrReplaceTempView("DISNEY_GENRE")
+
+val disneyFinal = spark.sql("select d.*, r.averageRating from DISNEY_GENRE d INNER JOIN RATING r ON d.imdb_id = r.tconst")
+disneyFinal.show()
+
+disneyFinal.write.option("header", "false").format("csv").save("final_new/mid/disney_imdb")
